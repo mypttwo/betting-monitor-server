@@ -1,52 +1,69 @@
-'use strict'
+"use strict";
 
-const abi = require('../abi');
-const {gameAddress} = require('../config');
+const abi = require("../abi");
+const { gameAddress } = require("../config");
 
+const getBalance = async (gameContractActor) => {
+  let owner = await gameContractActor.methods.owner().call();
+  let balance = await gameContractActor.methods.getBalanceContract().call({
+    from: owner,
+  });
+  console.log("balance", balance);
+  return balance;
+};
 
-const getBalance = async (gameActor) => {
-    let gameContractActor = new gameActor.eth.Contract(abi, gameAddress);
-    let owner = await gameContractActor.methods.owner().call();
-    // console.log('owner', owner);
-    let balance = await gameContractActor.methods.getBalanceContract().call({
-        from :owner
-    })
-    console.log('balance', balance);
-    return balance;
-}
+const getJackpot = async (gameContractActor) => {
+  let owner = await gameContractActor.methods.owner().call();
+  let jackpot = await gameContractActor.methods.getJackpot().call({
+    from: owner,
+  });
+  console.log("jackpot", jackpot);
+  return jackpot;
+};
 
-const getJackpot = async (gameActor) => {
-    let gameContractActor = new gameActor.eth.Contract(abi, gameAddress);
-    let owner = await gameContractActor.methods.owner().call();
-    // console.log('owner', owner);
-    let jackpot = await gameContractActor.methods.getJackpot().call({
-        from :owner
-    })
-    console.log('jackpot', jackpot);
-    return jackpot;
-}
+const getBidAddressArray = async (gameContractActor) => {
+  let owner = await gameContractActor.methods.owner().call();
+  let bidAddressArray = await gameContractActor.methods
+    .getBidAddressArray()
+    .call({
+      from: owner,
+    });
+  // console.log('bidAddressArray', bidAddressArray);
+  return bidAddressArray;
+};
 
-const getBidAddressArray = async (gameActor) => {
-    let gameContractActor = new gameActor.eth.Contract(abi, gameAddress);
-    let owner = await gameContractActor.methods.owner().call();
-    // console.log('owner', owner);
-    let bidAddressArray = await gameContractActor.methods.getBidAddressArray().call({
-        from :owner
-    })
-    // console.log('bidAddressArray', bidAddressArray);
-    return bidAddressArray;
-}
+const getDeadline = async (gameContractActor) => {
+  let owner = await gameContractActor.methods.owner().call();
+  let deadline = await gameContractActor.methods.deadline().call({
+    from: owner,
+  });
 
-const getDeadline = async (gameActor) => {
-    let gameContractActor = new gameActor.eth.Contract(abi, gameAddress);
-    let owner = await gameContractActor.methods.owner().call();
-    // console.log('owner', owner);
-    let deadline = await gameContractActor.methods.deadline().call({
-        from :owner
-    })
-    
+  return deadline;
+};
 
-    return deadline;
-}
+const getBiddingOpenStatus = async (gameContractActor) => {
+  let owner = await gameContractActor.methods.owner().call();
+  let openForBidding = await gameContractActor.methods.openForBidding().call({
+    from: owner,
+  });
 
-module.exports = {getBalance, getJackpot, getBidAddressArray, getDeadline}
+  return openForBidding;
+};
+
+const getPos = async (gameContractActor) => {
+  let owner = await gameContractActor.methods.owner().call();
+  let pos = await gameContractActor.methods.pos().call({
+    from: owner,
+  });
+
+  return pos;
+};
+
+module.exports = {
+  getBalance,
+  getJackpot,
+  getBidAddressArray,
+  getPos,
+  getDeadline,
+  getBiddingOpenStatus,
+};

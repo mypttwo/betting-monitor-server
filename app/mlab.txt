@@ -2,6 +2,9 @@ mlab
 user mypt_one
 pwd P9OCz4OtHLylqKxp
 
+read only client
+web/QjVfEhUsGHnq3xv
+
 
 
 const MongoClient = require('mongodb').MongoClient;

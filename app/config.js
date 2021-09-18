@@ -17,5 +17,4 @@ module.exports = {
   url_apikey,
   ws_apikey,
   mnemonic,
-  gameAddress,
 };

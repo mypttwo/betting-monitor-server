@@ -2,101 +2,100 @@
 
 const logger = require("./logger");
 
-const { gameAddress } = require("./config");
 const gameEventListener = require("./game-event-listener");
 const gameActor = require("./game-actor");
-const abi = require("./abi");
-
-const mongoose = require("./database");
 
 const {
-  getBalance,
-  getJackpot,
   getBidAddressArray,
+  getPos,
   getDeadline,
 } = require("./contract-functions/get-data");
-const clear = require("./contract-functions/clear");
-const extendDeadline = require("./contract-functions/extendDeadline");
 const end = require("./contract-functions/end");
 const setupGameEvents = require("./contract-functions/setup-events");
 const restart = require("./contract-functions/restart");
 
-const callContractMethod = require("./contract-functions/callContractMethod");
-
 logger.info("listener is alive!");
-
-let gameContractListener = new gameEventListener.eth.Contract(abi, gameAddress);
-
-setupGameEvents(gameContractListener, gameActor);
-
-// getBalance(gameActor);
-// getJackpot(gameActor);
-// getBidAddressArray(gameActor);
-// getDeadline(gameActor);
-// end(gameActor, restart);
-// restart(gameActor);
-// getDeadline(gameActor);
-//   clear(gameActor);
-
-let gameContractActor = new gameActor.eth.Contract(abi, gameAddress);
-//  clear(gameActor, gameContractActor);
 
 let randomDate = (start, end) =>
   new Date(start + Math.random() * (end - start));
 
-let restartExtendGame = async (type) => {
-  let bidAddressArray = await getBidAddressArray(gameActor);
-  let nonAddress0List = bidAddressArray.filter(
-    (bidAddress) =>
-      bidAddress.localeCompare("0x0000000000000000000000000000000000000000") !=
-      0
-  );
+const TIMEOUT = 0;
+const ALGO = 1;
 
-  if (nonAddress0List.length > 0) {
-    await end(gameActor, gameContractActor, type);
-    await restart(gameActor, gameContractActor);
-  } else {
-    console.log("extending deadline since no one has bid...");
-    console.log("bidAddressArray", bidAddressArray);
-    await extendDeadline(gameActor, gameContractActor);
-  }
-};
+let gameContractActor;
+let gameContractListener;
+let game;
+let timer;
+//helpers
+const getTimeToDeadline = async () => {
+  let deadline = await getDeadline(gameContractActor);
 
-let endRestartTask = async () => {
-  // let endDate = new Date();
-  // endDate.setHours( endDate.getHours() + 1 );
-  // let rndDate = randomDate(Date.now(), endDate);
-  // console.log(rndDate);
-  let deadline = await getDeadline(gameActor);
-  // console.log('deadline', deadline);
   let currentTime = Date.now() / 1000;
   console.log("time to deadline", deadline - currentTime);
-  if (currentTime > deadline) {
-    await restartExtendGame(0);
+
+  return {
+    timeToDeadline: deadline - currentTime,
+    isPast: currentTime > deadline ? true : false,
+  };
+};
+
+const getCurrentJackpotHolder = async () => {
+  let bidAddressArray = await getBidAddressArray(gameContractActor);
+  let pos = await getPos(gameContractActor);
+  let holder = bidAddressArray[pos];
+  let isEmpty =
+    holder.localeCompare("0x0000000000000000000000000000000000000000") == 0;
+  return { holder, isEmpty };
+};
+
+const checkDeadline = async () => {
+  //getDeadline
+  // if deadline is past end and restart
+  // else reset timer to deadline
+  let { timeToDeadline, isPast } = await getTimeToDeadline(gameContractActor);
+  if (isPast) {
+    await end(gameActor, gameContractActor, TIMEOUT);
+    await restart(gameActor, gameContractActor, game);
+  } else {
+    clearTimeout(timer);
+    timer = setTimeout(checkDeadline, timeToDeadline * 1000);
+  }
+};
+const newBidHandler = async (error, event) => {
+  // get time to deadline
+  let { timeToDeadline } = await getTimeToDeadline();
+  // checkDeadline after deadline
+  clearTimeout(timer);
+  timer = setTimeout(checkDeadline, timeToDeadline * 1000);
+};
+
+const start = async () => {
+  // get current jackpot holder (cjh)
+  let { isEmpty } = await getCurrentJackpotHolder();
+  // if cjh is available
+  // get time to deadline
+  // checkDeadline after deadline
+  if (!isEmpty) {
+    let { timeToDeadline } = await getTimeToDeadline();
+    // checkDeadline after deadline
+    timer = setTimeout(checkDeadline, timeToDeadline);
+  } else {
+    // if cjh is not available wake up in one hour
+    timer = setTimeout(checkDeadline, 60 * 60 * 1000);
+    console.log("No bidders.Going to sleep...");
   }
 };
 
-let performTask = async () => {
-  // console.log('performing task');
-  clearInterval(taskRunner);
+process.on("message", (msg) => {
+  game = msg.game;
+  console.log("Setting up listener for Game :", game.address);
+  gameContractActor = new gameActor.eth.Contract(game.abi, game.address);
+  gameContractListener = new gameEventListener.eth.Contract(
+    game.abi,
+    game.address
+  );
 
-  await endRestartTask();
+  setupGameEvents(gameContractListener, newBidHandler);
 
-  await resetTaskRunner();
-};
-
-let taskRunner;
-
-taskRunner = setInterval(performTask, 5000);
-
-let resetTaskRunner = () => {
-  taskRunner = setInterval(performTask, 5000);
-};
-
-setInterval(async () => {
-  await restartExtendGame(1);
-}, 5 * 60 * 1000);
-
-// process.on("message", (msg) => {
-//   console.log("Message from parent:", msg);
-// });
+  start();
+});

@@ -1,17 +1,16 @@
 "use strict";
+const web3 = require("web3");
 
-const abi = require("../abi");
-const { gameAddress } = require("../config");
+const callContractMethod = require("./callContractMethod");
 
-const callContractMethod = require('./callContractMethod');
-
-const restart = async (gameActor, gameContractActor) => {
+const restart = async (gameActor, gameContractActor, game) => {
   let method = gameContractActor.methods.restart(
-    "2300000000000000",
-    "0x05a538A4Dc2917FbB5ef5c29aA41001B2b545Ef2",
-    240
+    web3.utils.toWei(`${game.amount}`),
+    web3.utils.toWei(`${game.bidValue}`),
+    game.gameHostAddress,
+    game.interval
   );
-  await callContractMethod(method, gameActor, 2300000000000000);
-}
+  await callContractMethod(method, gameActor);
+};
 
 module.exports = restart;
