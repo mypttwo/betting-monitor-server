@@ -66,6 +66,7 @@ const callContractMethod = async (method, gameActor, value) => {
     logger.error(
       `${method._method.name} error: ${JSON.stringify(error, null, 3)}`
     );
+    process.exit(1);
   }
 };
 
