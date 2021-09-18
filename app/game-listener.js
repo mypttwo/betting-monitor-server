@@ -9,6 +9,7 @@ const {
   getBidAddressArray,
   getPos,
   getDeadline,
+  getBiddingOpenStatus,
 } = require("./contract-functions/get-data");
 const end = require("./contract-functions/end");
 const setupGameEvents = require("./contract-functions/setup-events");
@@ -80,7 +81,14 @@ const start = async () => {
     // checkDeadline after deadline
     timer = setTimeout(checkDeadline, timeToDeadline);
   } else {
-    // if cjh is not available wake up in one hour
+    // if cjh is not available
+    //check if open for bidding; if not call start
+    // else wake up in one hour
+    let openForBidding = await getBiddingOpenStatus(gameContractActor);
+    if (!openForBidding) {
+      await restart(gameActor, gameContractActor, game);
+      console.log("restarting game");
+    }
     timer = setTimeout(checkDeadline, 60 * 60 * 1000);
     console.log("No bidders.Going to sleep...");
   }
